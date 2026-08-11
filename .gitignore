@@ -1,0 +1,27 @@
+﻿# Environment / secrets
+.env
+env.txt
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# Node / Next
+node_modules/
+frontend/.next/
+frontend/out/
+
+# DB
+*.db
+*.sqlite3
+
+# Misc
+.idea/
+.vscode/
+.DS_Store
