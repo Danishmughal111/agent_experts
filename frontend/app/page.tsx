@@ -1,6 +1,6 @@
 ﻿"use client";
 import { useEffect, useState } from "react";
-import { chat, login, apiGet, apiPost } from "@/lib/api";
+import { chat, apiGet, apiPost } from "@/lib/api";
 
 type Balance = { allocated_balance: number; currency: string; real_money_note: string };
 type LedgerItem = { id: number; direction: string; category: string; amount: number; balance_after: number; description: string; time: string };
@@ -8,8 +8,6 @@ type Notif = { id: number; title: string; body: string; level: string; read: boo
 type Status = { stop_loss: { halted: boolean; reason: string }; wallet: Balance };
 
 export default function Home() {
-  const [token, setToken] = useState<string | null>(null);
-  const [pw, setPw] = useState("");
   const [balance, setBalance] = useState<Balance | null>(null);
   const [status, setStatus] = useState<Status | null>(null);
   const [ledger, setLedger] = useState<LedgerItem[]>([]);
@@ -24,20 +22,14 @@ export default function Home() {
   const [dealCost, setDealCost] = useState("0");
   const [deals, setDeals] = useState<any[]>([]);
 
-  async function doLogin() {
-    const r = await login(pw);
-    setToken(r.token);
-    await refreshAll(r.token);
-  }
-
-  async function refreshAll(t: string) {
+  async function refreshAll() {
     try {
       const [b, s, l, n, d] = await Promise.all([
-        apiGet("/api/balance", t),
-        apiGet("/owner/status", t),
-        apiGet("/api/ledger", t),
-        apiGet("/api/notifications", t),
-        apiGet("/api/deals", t),
+        apiGet("/api/balance"),
+        apiGet("/owner/status"),
+        apiGet("/api/ledger"),
+        apiGet("/api/notifications"),
+        apiGet("/api/deals"),
       ]);
       setBalance(b);
       setStatus(s);
@@ -49,6 +41,10 @@ export default function Home() {
     }
   }
 
+  useEffect(() => {
+    refreshAll();
+  }, []);
+
   async function doChat() {
     if (!msg.trim()) return;
     setChatLog((c) => [...c, { role: "user", text: msg }]);
@@ -58,36 +54,22 @@ export default function Home() {
   }
 
   async function doDeposit() {
-    await apiPost("/api/deposit", token!, { amount: parseFloat(depAmt) });
-    await refreshAll(token!);
+    await apiPost("/api/deposit", { amount: parseFloat(depAmt) });
+    await refreshAll();
   }
 
   async function doDeal() {
-    await apiPost("/api/deals", token!, {
+    await apiPost("/api/deals", {
       customer: dealCust, title: dealTitle,
       amount: parseFloat(dealAmt), cost: parseFloat(dealCost || "0"),
     });
     setDealCust(""); setDealTitle(""); setDealAmt("100"); setDealCost("0");
-    await refreshAll(token!);
+    await refreshAll();
   }
 
   async function confirmPayment(dealId: number) {
-    await apiPost("/api/deals/confirm-payment", token!, { deal_id: dealId });
-    await refreshAll(token!);
-  }
-
-  if (!token) {
-    return (
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ background: "#1e293b", padding: 32, borderRadius: 16, width: 320 }}>
-          <h1 style={{ marginTop: 0 }}>Agent Experts</h1>
-          <p style={{ color: "#94a3b8" }}>Enter owner password to unlock</p>
-          <input value={pw} type="password" onChange={(e) => setPw(e.target.value)}
-            placeholder="password" style={inputStyle} />
-          <button onClick={doLogin} style={btnStyle}>Unlock</button>
-        </div>
-      </div>
-    );
+    await apiPost("/api/deals/confirm-payment", { deal_id: dealId });
+    await refreshAll();
   }
 
   return (
@@ -226,4 +208,3 @@ function Panel({ title, children }: any) {
     </div>
   );
 }
-
