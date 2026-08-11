@@ -17,8 +17,4 @@ COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 EXPOSE 10000
-<<<<<<< HEAD
 CMD ["node", "server.js"]
-=======
-CMD ["node", "server.js"]
->>>>>>> 498f939250ce5d746450f3bf6567628324e3f889
