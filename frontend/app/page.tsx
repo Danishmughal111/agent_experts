@@ -4,7 +4,7 @@ import { chat, login, apiGet, apiPost } from "@/lib/api";
 
 type Balance = { allocated_balance: number; currency: string; real_money_note: string };
 type LedgerItem = { id: number; direction: string; category: string; amount: number; balance_after: number; description: string; time: string };
-type Notif = { id: number; title: string; body: string; level: string; time: string };
+type Notif = { id: number; title: string; body: string; level: string; read: boolean; time: string };
 type Status = { stop_loss: { halted: boolean; reason: string }; wallet: Balance };
 
 export default function Home() {
@@ -226,3 +226,4 @@ function Panel({ title, children }: any) {
     </div>
   );
 }
+
