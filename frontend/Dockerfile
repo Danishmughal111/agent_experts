@@ -1,4 +1,4 @@
-﻿FROM node:20-alpine AS deps
+FROM node:20-alpine AS deps
 WORKDIR /app
 COPY package.json ./
 RUN npm install
@@ -12,9 +12,9 @@ RUN npm run build
 
 FROM node:20-alpine AS runner
 WORKDIR /app
-ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1
+ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 HOSTNAME=0.0.0.0
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
-EXPOSE 3000
+EXPOSE 10000
 CMD ["node", "server.js"]
