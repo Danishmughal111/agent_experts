@@ -25,3 +25,21 @@ frontend/out/
 .idea/
 .vscode/
 .DS_Store
+
+# Generated AI content (runtime artifacts)
+generated_products/
+generated_projects/
+generated_content/
+generated_business_site/
+
+# Test/execution outputs
+*.log
+test_result.txt
+app_test.txt
+e2e_result.txt
+new_features_result.txt
+build_result.txt
+check_result.txt
+token.json
+server.log
+app_test.txt
