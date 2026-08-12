@@ -14,32 +14,52 @@ def _build_database_url(settings) -> str:
     Priority:
     1. If db_host is set, build a PostgreSQL URL from SEPARATE parts
        (db_host, db_user, db_password, db_port, db_name). This avoids
-       URL-format mistakes entirely.
-    2. Otherwise use database_url as-is (e.g. sqlite default).
+       URL-format mistakes entirely — the code joins the parts itself.
+    2. Otherwise use database_url as-is (e.g. sqlite default for local dev).
     """
     if settings.db_host:
-        user = quote_plus(settings.db_user or "postgres")
+        host = (settings.db_host or "").strip()
+        user = quote_plus((settings.db_user or "postgres").strip())
         password = quote_plus(settings.db_password or "")
-        host = settings.db_host
         port = settings.db_port or "5432"
         name = settings.db_name or "postgres"
         return f"postgresql://{user}:{password}@{host}:{port}/{name}"
 
-    # default_config placeholder from pydantic: sqlite in dev
     return settings.database_url
+
+
+def _mask_url(url: str) -> str:
+    """Return a log-safe version of the URL (password hidden)."""
+    try:
+        from sqlalchemy.engine import make_url
+        u = make_url(url)
+        if u.password:
+            return url.replace(u.password, "***")
+    except Exception:
+        pass
+    return url
 
 
 def _engine():
     settings = get_settings()
     url = _build_database_url(settings)
+
+    # Print a clear startup message so Render logs show exactly what is used.
+    print("=" * 60, flush=True)
+    if url.startswith("sqlite"):
+        print("[DB] Using SQLite (local/dev mode)", flush=True)
+    elif url.startswith("postgres"):
+        print("[DB] Using PostgreSQL:", _mask_url(url), flush=True)
+    print("=" * 60, flush=True)
+
     kwargs = {"pool_pre_ping": True}
     if url.startswith("sqlite"):
         kwargs["connect_args"] = {"check_same_thread": False}
     elif url.startswith("postgres"):
         # Supabase/PostgreSQL requires SSL
         kwargs["connect_args"] = {"sslmode": "require", "connect_timeout": 30}
-    engine = create_engine(url, **kwargs)
-    return engine
+
+    return create_engine(url, **kwargs)
 
 
 engine = _engine()
