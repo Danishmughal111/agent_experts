@@ -11,6 +11,9 @@ def _engine():
     kwargs = {"pool_pre_ping": True}
     if settings.database_url.startswith("sqlite"):
         kwargs["connect_args"] = {"check_same_thread": False}
+    elif settings.database_url.startswith("postgres"):
+        # Supabase/PostgreSQL requires SSL
+        kwargs["connect_args"] = {"sslmode": "require", "connect_timeout": 30}
     engine = create_engine(settings.database_url, **kwargs)
     return engine
 
