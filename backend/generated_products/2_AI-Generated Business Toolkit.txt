@@ -1,0 +1,6 @@
+Title: AI-Generated Business Toolkit
+Type: guide
+Created: 2026-08-12T16:32:28.036139+00:00
+================================================================================
+
+I'm your business agent. I can track money, make deals, and notify you on payments. Ask me about balance, deals, or profit.

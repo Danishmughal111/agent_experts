@@ -20,6 +20,13 @@ def do_login(body: LoginIn):
     return login(body.password)
 
 
+@router.get("/auto-login")
+def auto_login():
+    """Personal mode: auto-authenticate without password (single owner)."""
+    from app.auth import create_owner_token
+    return {"token": create_owner_token()}
+
+
 @router.get("/owner/status")
 def status():
     db = SessionLocal()

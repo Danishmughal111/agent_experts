@@ -19,6 +19,23 @@ class Settings(BaseSettings):
     min_balance_threshold: float = 200.0
     payoneer_api_key: str = ""
     payoneer_account_id: str = ""
+    # Trading API keys
+    alpaca_api_key: str = ""
+    alpaca_secret_key: str = ""
+    alpaca_base_url: str = "https://paper-api.alpaca.markets"
+    binance_api_key: str = ""
+    binance_secret_key: str = ""
+    # Gumroad
+    gumroad_access_token: str = ""
+    gumroad_product_id: str = ""
+    # Scheduler
+    scheduler_interval_minutes: int = 10
+    auto_approve_low_risk: bool = False
+    # Strategy defaults
+    trading_max_risk_pct: float = 10.0
+    trading_max_per_trade_pct: float = 2.0
+    content_auto_publish: bool = False
+    freelance_auto_apply: bool = False
 
     class Config:
         env_file = ".env"
