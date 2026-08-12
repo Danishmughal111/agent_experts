@@ -8,6 +8,12 @@ class Settings(BaseSettings):
     openai_model: str = "deepseek-chat"
     openai_base_url: str = "https://api.deepseek.com"
     database_url: str = "sqlite:///./dev.db"
+    # Separate DB connection parts (easier than a full URL)
+    db_host: str = ""
+    db_port: str = "5432"
+    db_name: str = "postgres"
+    db_user: str = "postgres"
+    db_password: str = ""
     secret_key: str = "change-me"
     owner_password: str = "change123"
     agent_token: str = "agent-secret"
