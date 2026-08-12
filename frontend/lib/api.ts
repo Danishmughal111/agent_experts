@@ -1,4 +1,4 @@
-﻿// API client for Agent Experts — AI Earning Machine.
+// API client for Agent Experts — AI Earning Machine.
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 const AGENT_TOKEN = "agent-secret";
 

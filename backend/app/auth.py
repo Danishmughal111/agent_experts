@@ -1,5 +1,5 @@
-﻿"""Auth: owner uses a master password; the chatbot endpoint uses an agent token.
-Kept simple & secure - no user registration (personal assistant, single owner)."""
+"""Auth: Now open (no login) so the personal dashboard works without a password.
+Kept hook-friendly so you can re-enable auth later if needed."""
 from fastapi import Depends, Header, HTTPException
 from datetime import datetime, timezone, timedelta
 
@@ -14,26 +14,12 @@ def create_owner_token():
     return jwt.encode(payload, settings.secret_key, algorithm="HS256")
 
 
+# Auth is currently DISABLED (open dashboard). Function kept so endpoints don't break.
 def verify_owner(authorization: str = Header(default="")):
-    settings = get_settings()
-    token = authorization.replace("Bearer ", "") if authorization.startswith("Bearer ") else authorization
-    if not token:
-        raise HTTPException(status_code=401, detail="Missing auth token")
-    try:
-        payload = jwt.decode(token, settings.secret_key, algorithms=["HS256"])
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token expired")
-    except Exception:
-        raise HTTPException(status_code=401, detail="Invalid token")
-    if payload.get("sub") != "owner":
-        raise HTTPException(status_code=401, detail="Not owner")
-    return payload
+    return {"sub": "owner", "open_auth": True}
 
 
 def verify_agent_token(x_agent_token: str = Header(default="")):
-    settings = get_settings()
-    if not x_agent_token or x_agent_token != settings.agent_token:
-        raise HTTPException(status_code=403, detail="Invalid agent token")
     return True
 
 
