@@ -19,9 +19,10 @@ class DigitalProductsStrategy(BaseStrategy):
                      "spreadsheet_template", "social_media_pack"]
 
     def run(self) -> dict:
-        """AI decides what digital product to create, generates it, and
-        prepares for Gumroad listing. Owner uploads to Gumroad manually
-        or via Gumroad API if configured."""
+        """AI decides what digital product to create, generates it, and then
+        ACTUALLY lists it on Gumroad so it can be sold for real money.
+
+        This is the full generate -> sell loop, not just generation."""
         if not self.can_run():
             return {"status": "skipped", "reason": "Strategy disabled or stop-loss triggered"}
 
@@ -37,18 +38,26 @@ class DigitalProductsStrategy(BaseStrategy):
         # Step 4: Save + create DB record
         saved = self._save_and_record(product, content)
 
-        # Step 5: Propose pricing
+        # Step 5: Recommend pricing
         pricing = self._recommend_pricing(product)
+
+        # Step 6: Actually list the product on Gumroad (real selling).
+        gumroad = self._publish_to_gumroad(saved, pricing)
 
         return {
             "status": "completed",
             "product_type": product["type"],
             "title": saved.title,
             "description": product.get("description", "")[:200],
-            "price_recommendation": f"${pricing['price']}",
-            "listing_ready": True,
-            "next_step": "Owner lists this product on Gumroad and sets Payoneer as payout method",
+            "price": f"${pricing['price']}",
             "product_id": saved.id,
+            "listing": gumroad,
+            "sellable_now": gumroad.get("listed", False),
+            "next_step": (
+                "Share this checkout URL to sell: " + gumroad.get("checkout_url", "N/A")
+                if gumroad.get("listed")
+                else gumroad.get("message", "Review Gumroad setup")
+            ),
         }
 
     def _analyze_market(self) -> str:
@@ -166,6 +175,80 @@ class DigitalProductsStrategy(BaseStrategy):
         except (json.JSONDecodeError, Exception):
             return default
 
+    def _publish_to_gumroad(self, product: DigitalProduct, pricing: dict) -> dict:
+        """Actually list the product on Gumroad for real selling.
+
+        Requires GUMROAD_ACCESS_TOKEN in the environment. If it is not set,
+        the strategy keeps working in generation-only mode but clearly reports
+        that the product is NOT yet sellable.
+        """
+        try:
+            from app.integrations.gumroad import get_client, dollars_to_cents
+            from app.integrations.gumroad import GumroadError
+
+            price_dollars = float(pricing.get("price", 9.99))
+            client = get_client()
+            result = client.create_product(
+                name=product.title,
+                description=product.description or product.title,
+                price_cents=dollars_to_cents(price_dollars),
+                currency="usd",
+            )
+
+            product.external_id = result.get("gumroad_id")
+            product.external_url = result.get("short_url")
+            product.price = dec(price_dollars)
+            self.db.commit()
+
+            self.log_execution(
+                action="product_listed_on_gumroad",
+                detail=f"Listed {product.title} on Gumroad",
+                result=f"Checkout: {result.get('short_url')}",
+            )
+            finance.notify(
+                self.db,
+                title="🛒 Product Listed for Sale!",
+                body=(
+                    f"'{product.title}' is now LIVE on Gumroad for "
+                    f"${price_dollars:.2f}. Share: {result.get('short_url')}"
+                ),
+                level="success",
+            )
+            return {
+                "listed": True,
+                "checkout_url": result.get("short_url"),
+                "gumroad_id": result.get("gumroad_id"),
+            }
+        except GumroadError as e:
+            self.log_execution(
+                action="gumroad_listing_failed",
+                detail=f"Could not list {product.title} on Gumroad",
+                result=str(e),
+            )
+            finance.notify(
+                self.db,
+                title="⚠️ Gumroad Listing Skipped",
+                body=(
+                    f"'{product.title}' was generated but NOT listed on Gumroad. "
+                    f"Reason: {e}"
+                ),
+                level="warning",
+            )
+            return {
+                "listed": False,
+                "message": f"Gumroad listing skipped: {e}",
+            }
+        except Exception as e:
+            self.log_execution(
+                action="gumroad_listing_failed",
+                detail=f"Unexpected error listing {product.title}",
+                result=str(e),
+            )
+            return {
+                "listed": False,
+                "message": f"Could not list on Gumroad: {e}",
+            }
+
     def get_all_products(self) -> list:
         products = self.db.query(DigitalProduct).order_by(
             DigitalProduct.created_at.desc()
@@ -180,6 +263,8 @@ class DigitalProductsStrategy(BaseStrategy):
                 "sales_count": p.sales_count,
                 "total_revenue": float(p.total_revenue),
                 "platform": p.platform,
+                "checkout_url": p.external_url,
+                "gumroad_id": p.external_id,
             }
             for p in products
         ]

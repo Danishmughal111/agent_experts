@@ -144,8 +144,13 @@ def check_stop_loss(db: Session) -> dict:
             total_loss_pct = float((bal - initial) / initial * 100)
 
     reasons = []
-    if bal <= _dec(settings.min_balance_threshold):
-        reasons.append(f"Balance {bal} below minimum threshold {settings.min_balance_threshold}")
+    # $0-start fix: only halt when the balance drops below a POSITIVE floor
+    # (a real loss scenario), never when the machine simply starts at zero.
+    floor = _dec(settings.min_balance_threshold)
+    if floor > 0 and bal <= floor:
+        reasons.append(f"Balance {bal} below minimum threshold {floor}")
+    elif bal < 0:
+        reasons.append(f"Balance is negative ({bal}) — more spent than allocated")
     if total_loss_pct <= -settings.total_loss_limit_pct:
         reasons.append(f"Total loss {total_loss_pct:.1f}% exceeds limit {-settings.total_loss_limit_pct}%")
 

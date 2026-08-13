@@ -25,17 +25,20 @@ DECISION_SYSTEM = (
 
 
 STRATEGY_DEFAULTS = {
-    "digital_products": {"display": "Digital Products (Gumroad)", "risk": "low"},
-    "coding_agent": {"display": "AI Coding Agent", "risk": "medium"},
-    "content": {"display": "Content Monetization", "risk": "low"},
-    "trading": {"display": "Stock/Crypto Trading", "risk": "high"},
-    "freelance": {"display": "Freelance Bot", "risk": "medium"},
-    "business": {"display": "Business Website & Agent", "risk": "low"},
+    "digital_products": {"display": "Digital Products (Gumroad)", "risk": "low", "enabled": True},
+    "coding_agent": {"display": "AI Coding Agent", "risk": "medium", "enabled": True},
+    "content": {"display": "Content Monetization", "risk": "low", "enabled": True},
+    "trading": {"display": "Stock/Crypto Trading", "risk": "high", "enabled": False},
+    "freelance": {"display": "Freelance Bot", "risk": "medium", "enabled": True},
+    "business": {"display": "Business Website & Agent", "risk": "low", "enabled": True},
 }
 
 
 def ensure_default_strategies(db: Session):
-    """Create default earning strategies if they don't exist."""
+    """Create default earning strategies if they don't exist.
+
+    $0-start mode: only zero-cost strategies are enabled by default.
+    Trading needs real capital + API keys, so it starts DISABLED."""
     for name, cfg in STRATEGY_DEFAULTS.items():
         existing = db.query(EarningStrategy).filter_by(name=name).first()
         if not existing:
@@ -43,6 +46,7 @@ def ensure_default_strategies(db: Session):
                 name=name,
                 display_name=cfg["display"],
                 risk_level=cfg["risk"],
+                enabled=cfg.get("enabled", True),
                 daily_profit_target=Decimal("50.00"),
                 daily_loss_limit=Decimal("20.00"),
                 max_concurrent=5,

@@ -149,6 +149,63 @@ def list_products(_=Depends(verify_owner)):
         db.close()
 
 
+class GumroadSaleWebhook(BaseModel):
+    """Gumroad sends this when a customer buys a product.
+
+    Gumroad's real payload has fields like product_id, price, permalink, etc.
+    We accept a flexible subset so the webhook works for the standard sale event.
+    """
+    product_id: Optional[str] = None
+    gumroad_id: Optional[str] = None
+    price: Optional[float] = None
+    permalink: Optional[str] = None
+    seller_id: Optional[str] = None
+    email: Optional[str] = None
+
+
+@router.post("/gumroad/webhook")
+def gumroad_sale_webhook(body: GumroadSaleWebhook):
+    """Receive a real Gumroad sale and credit the agent wallet automatically.
+
+    This completes the full generate -> sell -> earn loop: when a customer
+    buys on Gumroad, this endpoint records the revenue without any manual step.
+    """
+    db = SessionLocal()
+    try:
+        amount = float(body.price or 0.0)
+        external_ref = body.gumroad_id or body.permalink or ""
+
+        product = None
+        if body.product_id or body.gumroad_id:
+            product = (
+                db.query(DigitalProduct)
+                .filter(
+                    (DigitalProduct.external_id == body.gumroad_id)
+                    | (DigitalProduct.external_id == body.product_id)
+                )
+                .first()
+            )
+
+        if product and amount > 0:
+            strategy = DigitalProductsStrategy(db)
+            strategy.record_sale(product.id, amount, external_ref)
+        elif amount > 0:
+            # Sale for a product we don't have mapped — still record revenue.
+            finance.deposit(
+                db, amount, note=f"Gumroad sale (unmapped): {external_ref}"
+            )
+            finance.notify(
+                db,
+                title="💳 Gumroad Sale Received!",
+                body=f"${amount} received from Gumroad (ref: {external_ref}).",
+                level="success",
+            )
+
+        return {"status": "recorded", "amount": amount, "ref": external_ref}
+    finally:
+        db.close()
+
+
 class ProductSaleIn(BaseModel):
     product_id: int
     amount: float

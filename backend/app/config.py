@@ -18,11 +18,14 @@ class Settings(BaseSettings):
     owner_password: str = "change123"
     agent_token: str = "agent-secret"
     base_currency: str = "USD"
-    initial_balance: float = 1000.0
+    # $0 start: the machine begins empty and earns from zero-cost strategies
+    # (digital products, coding, content, freelance, business) — no capital needed.
+    initial_balance: float = 0.0
     daily_loss_limit_pct: float = 10.0
     total_loss_limit_pct: float = 20.0
     max_trade_size_pct: float = 10.0
-    min_balance_threshold: float = 200.0
+    # Set to 0 so a zero starting balance does NOT trigger stop-loss.
+    min_balance_threshold: float = 0.0
     payoneer_api_key: str = ""
     payoneer_account_id: str = ""
     # Trading API keys
